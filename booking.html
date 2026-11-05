@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Seats | KEERTHI TRAVELS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <div class="logo">KEERTHI <span>TRAVELS</span></div>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="buses.html">Buses</a>
+        <a href="my-bookings.html">My Bookings</a>
+        <a href="contact.html">Contact</a>
+    </nav>
+</header>
+
+<section class="page-hero">
+    <h1>Reserve Your Seat</h1>
+    <p>Your comfortable journey starts here.</p>
+</section>
+
+<section class="section">
+    <h2>Passenger Details</h2>
+
+    <form id="bookingForm" class="search-form">
+        <input type="hidden" id="busId">
+
+        <input type="text" id="name" placeholder="Passenger Name" required>
+        <input type="email" id="email" placeholder="Email Address" required>
+        <input type="tel" id="phone" placeholder="Phone Number"
+               pattern="[0-9]{10}" maxlength="10" required>
+
+        <label for="travelDate">Journey Date</label>
+        <input type="date" id="travelDate" required>
+
+        <h3>Select Your Seat</h3>
+        <div id="seatLayout" class="seat-layout"></div>
+
+        <p id="selectedSeat">Selected Seat: None</p>
+
+        <button type="submit">Confirm Booking</button>
+    </form>
+
+    <div id="bookingMessage"></div>
+</section>
+
+<footer>
+    <p>© 2026 KEERTHI TRAVELS | Created by Keerthi</p>
+</footer>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const busId = params.get("bus_id");
+const date = params.get("date");
+
+document.getElementById("busId").value = busId || "";
+document.getElementById("travelDate").value = date || "";
+
+let selectedSeat = "";
+
+async function loadSeats() {
+    const layout = document.getElementById("seatLayout");
+
+    if (!busId) {
+        layout.innerHTML = "<p>Please select a bus from the Buses page first.</p>";
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `/api/buses/${encodeURIComponent(busId)}/seats?date=${encodeURIComponent(date || "")}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || "Unable to load seats");
+
+        layout.innerHTML = "";
+
+        for (let i = 1; i <= data.total_seats; i++) {
+            const seat = document.createElement("button");
+            const seatNo = "S" + i;
+            seat.type = "button";
+            seat.textContent = seatNo;
+            seat.className = "seat";
+
+            if (data.booked_seats.includes(seatNo)) {
+                seat.classList.add("booked");
+                seat.disabled = true;
+            } else {
+                seat.addEventListener("click", () => {
+                    document.querySelectorAll(".seat.selected")
+                        .forEach(item => item.classList.remove("selected"));
+
+                    seat.classList.add("selected");
+                    selectedSeat = seatNo;
+                    document.getElementById("selectedSeat").textContent =
+                        "Selected Seat: " + selectedSeat;
+                });
+            }
+
+            layout.appendChild(seat);
+        }
+    } catch (error) {
+        layout.innerHTML = `<p>${error.message}</p>`;
+    }
+}
+
+document.getElementById("bookingForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    if (!selectedSeat) {
+        alert("Please select a seat.");
+        return;
+    }
+
+    const booking = {
+        bus_id: busId,
+        name: document.getElementById("name").value,
+        email: document.getElementById("email").value,
+        phone: document.getElementById("phone").value,
+        booking_date: document.getElementById("travelDate").value,
+        seat_no: selectedSeat
+    };
+
+    const message = document.getElementById("bookingMessage");
+    message.textContent = "Processing booking...";
+
+    try {
+        const response = await fetch("/api/bookings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(booking)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) throw new Error(result.error || "Booking failed");
+
+        message.textContent = "Booking successful! Booking ID: " + result.booking_id;
+        this.reset();
+        selectedSeat = "";
+        document.getElementById("selectedSeat").textContent = "Selected Seat: None";
+        loadSeats();
+
+    } catch (error) {
+        message.textContent = error.message;
+    }
+});
+
+loadSeats();
+</script>
+
+</body>
+</html>

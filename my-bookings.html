@@ -1,0 +1,122 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bookings | KEERTHI TRAVELS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <div class="logo">KEERTHI <span>TRAVELS</span></div>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="buses.html">Buses</a>
+        <a href="my-bookings.html">My Bookings</a>
+        <a href="contact.html">Contact</a>
+    </nav>
+</header>
+
+<section class="page-hero">
+    <h1>My Bookings</h1>
+    <p>View and manage your travel reservations.</p>
+</section>
+
+<section class="section">
+    <h2>Find Your Reservations</h2>
+
+    <form id="lookupForm" class="search-form">
+        <input type="email" id="email" placeholder="Enter your booking email" required>
+        <button type="submit">View Bookings</button>
+    </form>
+
+    <div id="bookingResults" class="bus-results">
+        <p>Enter your email to view your bookings.</p>
+    </div>
+</section>
+
+<footer>
+    <p>© 2026 KEERTHI TRAVELS | Created by Keerthi</p>
+</footer>
+
+<script>
+const results = document.getElementById("bookingResults");
+
+async function loadBookings(email) {
+    results.textContent = "Loading your bookings...";
+
+    try {
+        const response = await fetch(
+            `/api/bookings?email=${encodeURIComponent(email)}`
+        );
+        const bookings = await response.json();
+
+        if (!response.ok) throw new Error(bookings.error || "Unable to load bookings");
+
+        if (!bookings.length) {
+            results.textContent = "No bookings found for this email.";
+            return;
+        }
+
+        results.innerHTML = "";
+
+        bookings.forEach(booking => {
+            const card = document.createElement("div");
+            card.className = "feature-card";
+
+            const details = document.createElement("div");
+            details.textContent =
+                `Booking ID: ${booking.booking_id} | Bus: ${booking.bus_no} | ` +
+                `${booking.source} to ${booking.destination} | ` +
+                `Date: ${booking.booking_date} | Seat: ${booking.seat_no} | ` +
+                `Fare: ₹${booking.fare} | Status: ${booking.status}`;
+
+            card.appendChild(details);
+
+            if (booking.status === "Confirmed") {
+                const cancelButton = document.createElement("button");
+                cancelButton.textContent = "Cancel Booking";
+                cancelButton.type = "button";
+                cancelButton.addEventListener("click", () =>
+                    cancelBooking(booking.booking_id, email)
+                );
+                card.appendChild(cancelButton);
+            }
+
+            results.appendChild(card);
+        });
+    } catch (error) {
+        results.textContent = error.message;
+    }
+}
+
+document.getElementById("lookupForm").addEventListener("submit", event => {
+    event.preventDefault();
+    loadBookings(document.getElementById("email").value.trim());
+});
+
+async function cancelBooking(bookingId, email) {
+    if (!confirm("Are you sure you want to cancel this booking?")) return;
+
+    try {
+        const response = await fetch(`/api/bookings/${bookingId}`, {
+            method: "DELETE"
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) throw new Error(result.error || "Cancellation failed");
+
+        alert("Booking cancelled successfully.");
+        loadBookings(email);
+    } catch (error) {
+        alert(error.message);
+    }
+}
+</script>
+
+</body>
+</html>

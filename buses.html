@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Buses | KEERTHI TRAVELS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <div class="logo">KEERTHI <span>TRAVELS</span></div>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="buses.html">Buses</a>
+        <a href="my-bookings.html">My Bookings</a>
+        <a href="contact.html">Contact</a>
+    </nav>
+</header>
+
+<section class="page-hero">
+    <h1>Find Your Bus</h1>
+    <p>Search. Select. Travel.</p>
+</section>
+
+<section class="section">
+    <h2>Search Available Buses</h2>
+
+    <form id="searchForm" class="search-form">
+        <input type="text" id="source" placeholder="From city" required>
+        <input type="text" id="destination" placeholder="To city" required>
+        <input type="date" id="travelDate" required>
+        <button type="submit">Search Buses</button>
+    </form>
+
+    <div id="busResults" class="bus-results">
+        <p>Enter your journey details to find available buses.</p>
+    </div>
+</section>
+
+<footer>
+    <p>© 2026 KEERTHI TRAVELS | Created by Keerthi</p>
+</footer>
+
+<script>
+document.getElementById("travelDate").min =
+    new Date().toISOString().split("T")[0];
+
+document.getElementById("searchForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const source = document.getElementById("source").value.trim();
+    const destination = document.getElementById("destination").value.trim();
+    const date = document.getElementById("travelDate").value;
+    const results = document.getElementById("busResults");
+
+    results.innerHTML = "<p>Searching buses...</p>";
+
+    try {
+        const response = await fetch(
+            `/api/buses?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}&date=${encodeURIComponent(date)}`
+        );
+
+        const buses = await response.json();
+
+        if (!response.ok) throw new Error(buses.error || "Search failed");
+
+        if (buses.length === 0) {
+            results.innerHTML = "<p>No buses found for this route.</p>";
+            return;
+        }
+
+        results.innerHTML = buses.map(bus => `
+            <div class="feature-card">
+                <h3>${bus.bus_no}</h3>
+                <p>${bus.source} → ${bus.destination}</p>
+                <p>Departure: ${bus.departure_time}</p>
+                <p>Available seats: ${bus.available_seats}</p>
+                <p>Fare: ₹${bus.fare}</p>
+                <a href="booking.html?bus_id=${bus.bus_id}&date=${encodeURIComponent(date)}">
+                    <button type="button">Book Now</button>
+                </a>
+            </div>
+        `).join("");
+
+    } catch (error) {
+        results.innerHTML = `<p>${error.message}. Please try again.</p>`;
+    }
+});
+</script>
+
+</body>
+</html>
